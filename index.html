@@ -11244,7 +11244,16 @@ function update3dMoonWidget() {
         return;
     }
 
-    // --- الأولولية 2: وضع الكتابة في حقل البحث ---
+    // --- الأولولية 2: وضع الكتابة في حقل البحث أو أزرار البحث ---
+    const isSearchArea = activeEl === youtubeSearchInput || activeEl === youtubeSearchButton || activeEl === document.getElementById('add-video-by-url-btn');
+    if (isSearchArea && key === 'arrowdown') {
+        e.preventDefault();
+        const activeScreen = document.querySelector('.app-screen.active');
+        const firstContentItem = activeScreen.querySelector('.navigable, .grid-item');
+        if (firstContentItem) setFocus(firstContentItem);
+        return;
+    }
+
     const isTyping = !youtubeSearchInput.readOnly && activeEl === youtubeSearchInput;
     if (isTyping) {
         if (key === 'enter' || key === 'ok') {
@@ -11328,18 +11337,18 @@ function handleGridMapping(key, el) {
     const cols = items.filter(item => Math.abs(item.getBoundingClientRect().top - firstItemTop) < 5).length || 1;
 
     switch(key) {
-        case 'arrowright': // في RTL: اليمين يذهب للعنصر السابق في الصف
+        case 'arrowright': // اليمين داخل المحتوى: يذهب للعنصر التالي (يمين)
+            if (idx < items.length - 1 && Math.abs(items[idx+1].getBoundingClientRect().top - currentRect.top) < 5) {
+                setFocus(items[idx + 1]);
+            }
+            break;
+        case 'arrowleft': // اليسار داخل المحتوى: يذهب للعنصر السابق (يسار) أو يعود للسايدبار
             if (idx > 0 && Math.abs(items[idx-1].getBoundingClientRect().top - currentRect.top) < 5) {
                 setFocus(items[idx - 1]);
             } else {
-                // إذا كان في بداية الصف، نذهب للسايدبار
+                // العودة للسايدبار عند الوصول لأقصى اليسار
                 const activeSidebarIcon = document.querySelector('nav .app-icon.active');
                 if (activeSidebarIcon) setFocus(activeSidebarIcon);
-            }
-            break;
-        case 'arrowleft': // في RTL: اليسار يذهب للعنصر التالي في الصف
-            if (idx < items.length - 1 && Math.abs(items[idx+1].getBoundingClientRect().top - currentRect.top) < 5) {
-                setFocus(items[idx + 1]);
             }
             break;
         case 'arrowup': 
@@ -11348,8 +11357,7 @@ function handleGridMapping(key, el) {
                 let bestMatch = items[idx - cols];
                 let minDiff = Math.abs(bestMatch.getBoundingClientRect().left - currentRect.left);
                 
-                // فحص العناصر المجاورة للتأكد من اختيار الأقرب عمودياً
-                for (let i = Math.max(0, idx - cols - 2); i <= Math.min(items.length - 1, idx - cols + 2); i++) {
+                for (let i = Math.max(0, idx - cols - 5); i <= Math.min(items.length - 1, idx - cols + 5); i++) {
                     let diff = Math.abs(items[i].getBoundingClientRect().left - currentRect.left);
                     if (diff < minDiff && items[i].getBoundingClientRect().top < currentRect.top) {
                         minDiff = diff;
@@ -11358,9 +11366,9 @@ function handleGridMapping(key, el) {
                 }
                 setFocus(bestMatch);
             } else {
-                // إذا كان في أول صف، نذهب لحقل البحث
-                const searchInput = document.getElementById('youtube-search-input');
-                if (searchInput) setFocus(searchInput);
+                // إذا كان في أول صف، نذهب لأزرار البحث
+                const searchControls = Array.from(document.querySelectorAll('#youtube-search-input, #youtube-search-button, #add-video-by-url-btn')).filter(el => el.offsetParent !== null);
+                if (searchControls.length > 0) setFocus(searchControls[0]);
             }
             break;
         case 'arrowdown': 
@@ -11399,12 +11407,20 @@ function handleGridMapping(key, el) {
         case 'arrowdown':
             nextIdx = idx < icons.length - 1 ? idx + 1 : 0;
             break;
-        case 'arrowright': // 🚀 الحل هنا: الانتقال للمحتوى
+        case 'arrowright': // الانتقال من السايدبار إلى أول عنصر يسار المحتوى
             const activeScreen = document.querySelector('.app-screen.active');
-            // البحث عن أول كارت أو زر داخل الشاشة
-            const firstContentItem = activeScreen.querySelector('.navigable, .grid-item');
-            if (firstContentItem) {
-                setFocus(firstContentItem);
+            // البحث عن كافة العناصر القابلة للتنقل في الشاشة النشطة
+            const contentItems = Array.from(activeScreen.querySelectorAll('.navigable, .grid-item')).filter(i => {
+                const style = window.getComputedStyle(i);
+                return i.offsetParent !== null && style.display !== 'none' && style.visibility !== 'hidden' && style.position !== 'fixed';
+            });
+            
+            if (contentItems.length > 0) {
+                // ترتيب العناصر حسب موقعها الأفقي (من اليسار إلى اليمين) واختيار الأول
+                contentItems.sort((a, b) => a.getBoundingClientRect().left - b.getBoundingClientRect().left);
+                setFocus(contentItems[0]);
+            }
+            break;
                 return; // الخروج لمنع تغيير أيقونة التاب
             }
             break;
