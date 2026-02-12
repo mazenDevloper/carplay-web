@@ -11576,7 +11576,8 @@ updateMoonHijriOverlay();
         const firstSidebarIcon = document.querySelector('nav .app-icon');
         if (firstSidebarIcon) setFocus(firstSidebarIcon);
     }, 1000);
-});         document.addEventListener('fullscreenchange', handleFullScreenChange);
+
+    document.addEventListener('fullscreenchange', handleFullScreenChange);
             document.addEventListener('webkitfullscreenchange', handleFullScreenChange); // For Safari
             
             videoPopupCloseButton.addEventListener('click', hideVideoPopup);
